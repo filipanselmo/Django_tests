@@ -1,5 +1,6 @@
 import pytest
 from django.urls import reverse
+import random
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 
@@ -21,25 +22,25 @@ def test_list_course(api_client, course_factory):
 
 @pytest.mark.django_db
 def test_id_course(api_client, course_factory):
-    course = course_factory(_quantity=4)
-    id_course = course[1].id
+    courses = course_factory(_quantity=4)
+    random_course = random.choice(courses)
     url = reverse('courses-list')
-    resp = api_client.get(url)
-    resp_json = resp.json()
-    resp_ids = {r['id'] for r in resp_json}
-    assert resp.status_code == HTTP_200_OK
-    assert id_course in resp_ids
+    response = api_client.get(f'{url}?id={random_course.id}')
+    assert response.status_code == HTTP_200_OK
+    data = response.json()
+    assert len(data) == 1
+    assert random_course.name == data[0]['name']
+
 
 @pytest.mark.django_db
-def test_name_course(api_client, course_factory):
-    course = course_factory(_quantity=4)
-    name_course = course[1].name
+def test_name_course(api_client):
     url = reverse('courses-list')
-    resp = api_client.get(url)
-    resp_json = resp.json()
-    resp_ids = {r['name'] for r in resp_json}
-    assert resp.status_code == HTTP_200_OK
-    assert name_course in resp_ids
+    course = api_client.post(url, data={'name': 'test_course'})
+    data = course.json()
+    response = api_client.get('/api/v1/courses/?name=test_course')
+    assert response.status_code == HTTP_200_OK
+    assert data['name'] == 'test_course'
+
 
 @pytest.mark.django_db
 def test_create_course(api_client, course_factory):
@@ -67,3 +68,5 @@ def test_delete_course(api_client, course_factory):
     url = reverse('courses-detail', args=(course.id, ))
     resp = api_client.delete(url, course, content_type='application/json')
     assert resp.status_code == HTTP_204_NO_CONTENT
+
+
